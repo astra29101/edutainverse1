@@ -1,11 +1,22 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, Video } from "lucide-react";
+import { ArrowLeft, BookOpen, Video, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Course {
   id: string;
@@ -18,6 +29,7 @@ interface Course {
 const Courses = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCourses();
@@ -48,6 +60,36 @@ const Courses = () => {
       console.error('Error fetching courses:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    setDeletingCourseId(courseId);
+    
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', courseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Course deleted successfully",
+      });
+
+      // Remove the course from the local state
+      setCourses(courses.filter(course => course.id !== courseId));
+    } catch (error) {
+      console.error('Error deleting course:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete course. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingCourseId(null);
     }
   };
 
@@ -133,11 +175,53 @@ const Courses = () => {
                     </span>
                   </div>
 
-                  <Link to={`/course/${course.id}`}>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                      View Course
-                    </Button>
-                  </Link>
+                  <div className="space-y-2">
+                    <Link to={`/course/${course.id}`}>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                        View Course
+                      </Button>
+                    </Link>
+                    
+                    <div className="flex gap-2">
+                      <Link to={`/edit-course/${course.id}`} className="flex-1">
+                        <Button variant="outline" className="w-full">
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
+                      </Link>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="destructive" 
+                            className="flex-1"
+                            disabled={deletingCourseId === course.id}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {deletingCourseId === course.id ? "Deleting..." : "Delete"}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the course
+                              "{course.title}" and all its modules and videos.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteCourse(course.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Delete Course
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
