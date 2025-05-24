@@ -9,109 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      courses: {
-        Row: {
-          category: Database["public"]["Enums"]["course_difficulty"]
-          created_at: string
-          description: string
-          id: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          category?: Database["public"]["Enums"]["course_difficulty"]
-          created_at?: string
-          description: string
-          id?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          category?: Database["public"]["Enums"]["course_difficulty"]
-          created_at?: string
-          description?: string
-          id?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      modules: {
-        Row: {
-          course_id: string
-          created_at: string
-          description: string | null
-          id: string
-          order_index: number
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          course_id: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          order_index?: number
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          course_id?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          order_index?: number
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "modules_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      videos: {
-        Row: {
-          created_at: string
-          id: string
-          module_id: string
-          order_index: number
-          title: string
-          updated_at: string
-          youtube_url: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          module_id: string
-          order_index?: number
-          title: string
-          updated_at?: string
-          youtube_url: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          module_id?: string
-          order_index?: number
-          title?: string
-          updated_at?: string
-          youtube_url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "videos_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "modules"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
@@ -120,7 +18,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      course_difficulty: "beginner" | "average" | "advanced"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -235,8 +133,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      course_difficulty: ["beginner", "average", "advanced"],
-    },
+    Enums: {},
   },
 } as const
