@@ -6,17 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Play, BookOpen } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Video {
   id: string;
   title: string;
-  youtubeUrl: string;
+  youtube_url: string;
+  order_index: number;
 }
 
 interface Module {
   id: string;
   title: string;
   description: string;
+  order_index: number;
   videos: Video[];
 }
 
@@ -32,17 +35,61 @@ const CourseView = () => {
   const { courseId } = useParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-    const foundCourse = savedCourses.find((c: Course) => c.id === courseId);
-    setCourse(foundCourse || null);
-    
-    // Set first video as default if available
-    if (foundCourse && foundCourse.modules.length > 0 && foundCourse.modules[0].videos.length > 0) {
-      setSelectedVideo(foundCourse.modules[0].videos[0]);
+    if (courseId) {
+      fetchCourse();
     }
   }, [courseId]);
+
+  const fetchCourse = async () => {
+    try {
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select(`
+          id,
+          title,
+          description,
+          category,
+          modules (
+            id,
+            title,
+            description,
+            order_index,
+            videos (
+              id,
+              title,
+              youtube_url,
+              order_index
+            )
+          )
+        `)
+        .eq('id', courseId)
+        .single();
+
+      if (courseError) throw courseError;
+
+      // Sort modules and videos by order_index
+      if (courseData) {
+        courseData.modules = courseData.modules.sort((a, b) => a.order_index - b.order_index);
+        courseData.modules.forEach(module => {
+          module.videos = module.videos.sort((a, b) => a.order_index - b.order_index);
+        });
+      }
+
+      setCourse(courseData);
+      
+      // Set first video as default if available
+      if (courseData && courseData.modules.length > 0 && courseData.modules[0].videos.length > 0) {
+        setSelectedVideo(courseData.modules[0].videos[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching course:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -66,6 +113,17 @@ const CourseView = () => {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
     return videoId ? `https://www.youtube.com/embed/${videoId[1]}` : url;
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading course...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!course) {
     return (
@@ -114,7 +172,7 @@ const CourseView = () => {
                 {selectedVideo ? (
                   <div className="aspect-video">
                     <iframe
-                      src={getYouTubeEmbedUrl(selectedVideo.youtubeUrl)}
+                      src={getYouTubeEmbedUrl(selectedVideo.youtube_url)}
                       title={selectedVideo.title}
                       className="w-full h-full rounded-lg"
                       allowFullScreen

@@ -5,35 +5,51 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, BookOpen, Video } from "lucide-react";
-
-interface Video {
-  id: string;
-  title: string;
-  youtubeUrl: string;
-}
-
-interface Module {
-  id: string;
-  title: string;
-  description: string;
-  videos: Video[];
-}
+import { supabase } from "@/integrations/supabase/client";
 
 interface Course {
   id: string;
   title: string;
   description: string;
   category: 'beginner' | 'average' | 'advanced';
-  modules: Module[];
+  modules: { id: string; videos: { id: string }[] }[];
 }
 
 const Courses = () => {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-    setCourses(savedCourses);
+    fetchCourses();
   }, []);
+
+  const fetchCourses = async () => {
+    try {
+      const { data: coursesData, error: coursesError } = await supabase
+        .from('courses')
+        .select(`
+          id,
+          title,
+          description,
+          category,
+          modules (
+            id,
+            videos (
+              id
+            )
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (coursesError) throw coursesError;
+
+      setCourses(coursesData || []);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -56,6 +72,17 @@ const Courses = () => {
   const getTotalVideos = (course: Course) => {
     return course.modules.reduce((total, module) => total + module.videos.length, 0);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading courses...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

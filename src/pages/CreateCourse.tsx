@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Video {
   id: string;
@@ -40,6 +41,7 @@ const CreateCourse = () => {
     category: 'beginner',
     modules: []
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addModule = () => {
     const newModule: Module = {
@@ -110,7 +112,7 @@ const CreateCourse = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!course.title || !course.description) {
@@ -122,18 +124,76 @@ const CreateCourse = () => {
       return;
     }
 
-    // In a real app, this would save to a database
-    const savedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-    const newCourse = { ...course, id: Date.now().toString() };
-    savedCourses.push(newCourse);
-    localStorage.setItem('courses', JSON.stringify(savedCourses));
+    setIsSubmitting(true);
 
-    toast({
-      title: "Success!",
-      description: "Course created successfully",
-    });
+    try {
+      // Insert the course
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .insert({
+          title: course.title,
+          description: course.description,
+          category: course.category
+        })
+        .select()
+        .single();
 
-    navigate('/courses');
+      if (courseError) throw courseError;
+
+      // Insert modules and videos
+      for (let moduleIndex = 0; moduleIndex < course.modules.length; moduleIndex++) {
+        const module = course.modules[moduleIndex];
+        
+        if (!module.title) continue; // Skip empty modules
+        
+        const { data: moduleData, error: moduleError } = await supabase
+          .from('modules')
+          .insert({
+            course_id: courseData.id,
+            title: module.title,
+            description: module.description || '',
+            order_index: moduleIndex
+          })
+          .select()
+          .single();
+
+        if (moduleError) throw moduleError;
+
+        // Insert videos for this module
+        for (let videoIndex = 0; videoIndex < module.videos.length; videoIndex++) {
+          const video = module.videos[videoIndex];
+          
+          if (!video.title || !video.youtubeUrl) continue; // Skip empty videos
+          
+          const { error: videoError } = await supabase
+            .from('videos')
+            .insert({
+              module_id: moduleData.id,
+              title: video.title,
+              youtube_url: video.youtubeUrl,
+              order_index: videoIndex
+            });
+
+          if (videoError) throw videoError;
+        }
+      }
+
+      toast({
+        title: "Success!",
+        description: "Course created successfully",
+      });
+
+      navigate('/courses');
+    } catch (error) {
+      console.error('Error creating course:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create course. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -313,8 +373,13 @@ const CreateCourse = () => {
           </Card>
 
           <div className="flex gap-4">
-            <Button type="submit" size="lg" className="bg-blue-600 hover:bg-blue-700">
-              Create Course
+            <Button 
+              type="submit" 
+              size="lg" 
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create Course"}
             </Button>
             <Button type="button" variant="outline" size="lg" onClick={() => navigate('/')}>
               Cancel
