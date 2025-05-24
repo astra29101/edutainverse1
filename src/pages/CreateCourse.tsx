@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -287,7 +286,6 @@ const CreateCourse = () => {
                                 value={video.title}
                                 onChange={(e) => updateVideo(module.id, video.id, 'title', e.target.value)}
                                 placeholder="Enter video title"
-                                size="sm"
                               />
                             </div>
                             <div>
@@ -296,7 +294,6 @@ const CreateCourse = () => {
                                 value={video.youtubeUrl}
                                 onChange={(e) => updateVideo(module.id, video.id, 'youtubeUrl', e.target.value)}
                                 placeholder="https://www.youtube.com/watch?v=..."
-                                size="sm"
                               />
                             </div>
                           </div>

@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { BookOpen, Plus, GraduationCap } from "lucide-react";
+import { BookOpen, Plus, GraduationCap, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
